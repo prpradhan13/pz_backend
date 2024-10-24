@@ -44,6 +44,12 @@ app.use('/api/v1/training', trainingRoute);
 // Server start after connecting to Database
 connectDB()
 .then(() => {
+    app.get('/', (req, res) => {
+        res.status(200).json({
+            success: true,
+            message: 'Welcome to PZ Server'
+        })
+    })
     app.listen(port, () => {
         console.log(`listening on port ${port}`);
     });

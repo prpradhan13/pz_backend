@@ -219,7 +219,7 @@ export const loginController = async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: "Strict",
-      maxAge: 48 * 60 * 60 * 1000, // Cookie will last for 1 day
+      maxAge: 48 * 60 * 60 * 1000, // Cookie will last for 2 day
     };
 
     // 6. Send Response

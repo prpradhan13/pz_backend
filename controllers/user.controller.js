@@ -236,7 +236,7 @@ export const loginController = async (req, res) => {
     );
     const options = {
       httpOnly: true,
-      secure: process.env.NODE_ENV,
+      secure: process.env.NODE_ENV === "production" ? true : false,
       sameSite: "None",
       maxAge: 48 * 60 * 60 * 1000, // Cookie will last for 2 day
     };

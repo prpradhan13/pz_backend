@@ -7,13 +7,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         unique: true,
         trim: true,
-        required: true,
+        required: [true, 'Username is required'],
+        minlength: [5, 'Username must be at least 5 characters long']
     },
     fullname: {
         type: String,
-        required: true,
+        required: [true, 'Full name is required'],
         lowercase: true,
         trim: true,
+        minlength: [5, 'Username must be at least 5 characters long']
     },
     email: {
         type: String,
@@ -25,6 +27,7 @@ const userSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true,
+        minlength: [8, 'Password must be at least 8 characters long']
     },
     isAdmin:{
         type: Boolean,

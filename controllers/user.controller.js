@@ -6,13 +6,13 @@ import dotenv from "dotenv";
 dotenv.config()
 
 // Create a transporter object using your email provider's SMTP settings
-// const transporter = nodemailer.createTransport({
-//   service: "Gmail",
-//   auth: {
-//     user: process.env.EMAIL_USER,  // Your email
-//     pass: process.env.EMAIL_PASSWORD,  // Your email app password
-//   },
-// });
+const transporter = nodemailer.createTransport({
+  service: "Gmail",
+  auth: {
+    user: process.env.EMAIL_USER,  // Your email
+    pass: process.env.EMAIL_PASSWORD,  // Your email app password
+  },
+});
 
 // Generate Access Token & Refresh Token
 const generateAccessAndRefreshToken = async (userId) => {
@@ -34,33 +34,33 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 // Function to send verification email
-// const sendVerificationEmail = async (user, req) => {
-//   const verificationToken = jwt.sign(
-//     { userId: user._id, email: user.email },
-//     process.env.EMAIL_VERIFICATION_SECRET,
-//     { expiresIn: "1h" }
-//   );
+const sendVerificationEmail = async (user, req) => {
+  const verificationToken = jwt.sign(
+    { userId: user._id, email: user.email },
+    process.env.EMAIL_VERIFICATION_SECRET,
+    { expiresIn: "1h" }
+  );
 
-//   const verificationLink = `${req.protocol}://${req.get(
-//     "host"
-//   )}/api/v1/user/verify-email?token=${verificationToken}`;
+  const verificationLink = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/user/verify-email?token=${verificationToken}`;
 
-//   const mailOptions = {
-//     from: process.env.EMAIL_USER,
-//     to: user.email,
-//     subject: "Email Verification",
-//     text: `Please verify your email by clicking the following link: ${verificationLink}`,
-//     html: `<a href="${verificationLink}">Verify your email</a>`,
-//   }
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: user.email,
+    subject: "Email Verification",
+    text: `Please verify your email by clicking the following link: ${verificationLink}`,
+    html: `<a href="${verificationLink}">Verify your email</a>`,
+  }
 
-//   transporter.sendMail(mailOptions, (error, info) => {
-//     if (error) {
-//       console.log("Error sending email:", error);
-//     } else {
-//       console.log("Email sent: " + info.response);
-//     }
-//   })
-// };
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log("Error sending email:", error);
+    } else {
+      console.log("Email sent: " + info.response);
+    }
+  })
+};
 
 export const signupController = async (req, res) => {
   try {
@@ -77,6 +77,22 @@ export const signupController = async (req, res) => {
         .json({ success: false, message: "All fields are required" });
     }
 
+    if (username.length < 5 || fullname.length < 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and full name must be at least 5 characters long.",
+      });
+    }
+
+    const usernameRegex = /^[A-Za-z]+$/;  // Username: only letters
+    const alphabetRegex = /^[A-Za-z\s]+$/; // Fullname: letters and spaces
+    if (!alphabetRegex.test(fullname)) {
+      return res.status(400).json({
+        success: false,
+        message: "Full name must only contain letters (no numbers or special characters).",
+      });
+    }
+
     // Password validation
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[@#!$^&*])[A-Za-z\d@#!]{8,}$/;
@@ -89,11 +105,14 @@ export const signupController = async (req, res) => {
     }
 
     // 2. Check if the user already exists
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    const existingUser = await User.findOne({ $or: [{ username: username.toLowerCase() }, { email }] });
     if (existingUser) {
-      return res
-        .status(409)
-        .json({ message: "User with this email already exists" });
+      return res.status(409).json({
+        message:
+          existingUser.username === username
+            ? "Username is already taken"
+            : "Email is already registered",
+      });
     }
 
     // 3. Save the user to the database
@@ -116,7 +135,7 @@ export const signupController = async (req, res) => {
     }
 
     // Send verification email
-    // await sendVerificationEmail(savedUser, req);
+    await sendVerificationEmail(savedUser, req);
 
     // 5. Send response
     return res.status(200).json({
@@ -134,41 +153,41 @@ export const signupController = async (req, res) => {
   }
 };
 
-// export const verifyEmailController = async (req, res) => {
-//   try {
-//     const { token } = req.query;
+export const verifyEmailController = async (req, res) => {
+  try {
+    const { token } = req.query;
 
-//     if (!token) {
-//       return res.status(400).json({ success: false, message: "Invalid token" });
-//     }
+    if (!token) {
+      return res.status(400).json({ success: false, message: "Invalid token" });
+    }
 
-//     // Verify the token
-//     const decoded = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
-//     const user = await User.findById(decoded.userId);
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.EMAIL_VERIFICATION_SECRET);
+    const user = await User.findById(decoded.userId);
 
-//     if (!user) {
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "User not found" });
-//     }
+    if (!user) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
+    }
 
-//     // Mark the user email as verified
-//     user.isEmailVerified = true;
-//     await user.save();
+    // Mark the user email as verified
+    user.isEmailVerified = true;
+    await user.save();
 
-//     return res.status(200).json({
-//       success: true,
-//       message: "Email verified successfully. You can now log in.",
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Email verification failed",
-//       error: error.message,
-//     });
-//   }
-// };
+    return res.status(200).json({
+      success: true,
+      message: "Email verified successfully. You can now log in.",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Email verification failed",
+      error: error.message,
+    });
+  }
+};
 
 export const loginController = async (req, res) => {
   try {
@@ -192,12 +211,12 @@ export const loginController = async (req, res) => {
     }
 
     // 4. Check if email is verified
-    // if (!user.isEmailVerified) {
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: "Please verify your email before logging in",
-    //   });
-    // }
+    if (!user.isEmailVerified) {
+      return res.status(403).json({
+        success: false,
+        message: "Please verify your email before logging in",
+      });
+    }
 
     // 4. Check password is correct
     const isPasswordValid = await user.isPasswordCorrect(password);
@@ -229,7 +248,7 @@ export const loginController = async (req, res) => {
       .cookie("refreshToken", refreshToken, options)
       .json({
         success: true,
-        message: `Welcome back ${username}`,
+        message: `Welcome ${username}`,
         user: loggedInUser,
       });
   } catch (error) {
@@ -372,20 +391,20 @@ export const changeCurrentPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // Send email to notify the user
-    // const mailOptions = {
-    //   from: process.env.EMAIL_USER,
-    //   to: user.email,  // Send to user's email
-    //   subject: "Password Change Notification",
-    //   text: `Hello ${user.fullname},\n\nYour password has been successfully changed. If this wasn't you, please contact immediately.\n\nBest regards,\nPZ Team`,
-    // };
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: user.email,  // Send to user's email
+      subject: "Password Change Notification",
+      text: `Hello ${user.fullname},\n\nYour password has been successfully changed. If this wasn't you, please contact immediately.\n\nBest regards,\nPZ Team`,
+    };
 
-    // transporter.sendMail(mailOptions, (error, info) => {
-    //   if (error) {
-    //     console.log("Error sending email:", error);
-    //   } else {
-    //     console.log("Email sent: " + info.response);
-    //   }
-    // });
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.log("Error sending email:", error);
+      } else {
+        console.log("Email sent: " + info.response);
+      }
+    });
 
     const options = {
       httpOnly: true,

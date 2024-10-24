@@ -34,7 +34,7 @@ app.use(express.urlencoded({extended: true, limit: "16kb"}));
 app.use(cookieParser());
 app.use(helmet());
 app.use(limiter);
-app.use(morgan('combined'));
+// app.use(morgan('combined'));
 
 // Routes
 app.use('/api/v1/user', userRoute);

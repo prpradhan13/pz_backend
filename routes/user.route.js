@@ -8,7 +8,7 @@ import {
   logoutController,
   refreshAccessToken,
   signupController,
-  // verifyEmailController,
+  verifyEmailController,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/user.middleware.js";
 
@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.post("/signup", signupController);
 
-// router.get('/verify-email', verifyEmailController);
+router.get('/verify-email', verifyEmailController);
 
 router.post("/login", loginController);
 

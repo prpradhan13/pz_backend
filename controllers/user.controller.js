@@ -237,7 +237,7 @@ export const loginController = async (req, res) => {
     const options = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production" ? true : false,
-      sameSite: "None",
+      // sameSite: "None",
       maxAge: 48 * 60 * 60 * 1000, // Cookie will last for 2 day
     };
 
@@ -281,8 +281,8 @@ export const logoutController = async (req, res) => {
     // 3. Set cookie options
     const options = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production" ? true : false,
-      sameSite: "None",
+      secure: process.env.NODE_ENV === "development" ? true : false,
+      // sameSite: "None",
     };
 
     // 4. Send the Response

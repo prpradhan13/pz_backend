@@ -9,6 +9,7 @@ import morgan from 'morgan';
 import userRoute from './routes/user.route.js';
 import expenseRoute from './routes/expense.route.js';
 import trainingRoute from './routes/training.route.js';
+import todoRoute from './routes/todo.router.js';
 
 // Config .env file path
 dotenv.config({
@@ -17,7 +18,7 @@ dotenv.config({
 
 // Variables
 const app = express();
-const port = process.env.PORT || 8080;
+const port = process.env.PORT;
 const corsOptions = {
     origin: process.env.CORS_ORIGIN,
     credentials: true
@@ -33,13 +34,14 @@ app.use(express.json({limit: "16kb"}));
 app.use(express.urlencoded({extended: true, limit: "16kb"}));
 app.use(cookieParser());
 app.use(helmet());
-app.use(limiter);
+// app.use(limiter);
 app.use(morgan('combined'));
 
 // Routes
 app.use('/api/v1/user', userRoute);
 app.use('/api/v1/expense', expenseRoute);
 app.use('/api/v1/training', trainingRoute);
+app.use('/api/v1/todo', todoRoute);
 
 // Server start after connecting to Database
 connectDB()

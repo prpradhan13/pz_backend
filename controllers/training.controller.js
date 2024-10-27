@@ -28,6 +28,11 @@ export const createTraining = async (req, res) => {
         message: "Unauthorized: User not found.",
       });
     }
+    // Check if the user is an admin
+    const isAdmin = req.user.isAdmin === true;
+
+    // If user is not an admin, set isPublic to false
+    const publicStatus = isAdmin ? isPublic : false;
 
     // Create a new Training instance with the data
     const newTraining = await Training.create({
@@ -35,7 +40,7 @@ export const createTraining = async (req, res) => {
       trainingName: trainingName.toLowerCase(),
       category: category.toLowerCase(),
       trainingPlan,
-      isPublic
+      isPublic: publicStatus,
     });
 
     // Check if cacheKey exists and then delete the cache
@@ -60,12 +65,12 @@ export const getTraining = async (req, res) => {
   try {
     const userId = req.user?._id;
 
-    const { limit, page, sortBy = "date", order = "desc" } = req.query;
+    const { limit, page, sortBy = "createdAt", order = "desc" } = req.query;
 
     const cacheKey = `training_${userId}`;
     const cachedData = cache.get(cacheKey);
     if (cachedData) {
-      console.log("Serving from cache");
+      console.log(`Serving from cache`);
       return res.status(200).json({
         success: true,
         message: "Training retrieved from cache successfully",
@@ -106,26 +111,97 @@ export const getTraining = async (req, res) => {
   }
 };
 
+export const allPublicTrainingData = async (req, res) => {
+  try {
+    const {
+      limit = 10,
+      page = 1,
+      sortBy = "createdAt",
+      order = "desc",
+    } = req.query;
+
+    // Parse limit and page values
+    const limitNumber = parseInt(limit) || 10;
+    const skip = (parseInt(page) - 1) * limitNumber;
+
+    // Sort order (asc or desc)
+    const sortOrder = order === "asc" ? 1 : -1;
+
+    // Get total count of public training data
+    const total = await Training.countDocuments({ isPublic: true });
+
+    const trainingData = await Training.find({ isPublic: true })
+      .sort({ [sortBy]: sortOrder })
+      .limit(limitNumber)
+      .skip(skip);
+
+    // Send response
+    return res.status(200).json({
+      success: true,
+      message: "All public training data retrieved successfully",
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+      currentPage: parseInt(page),
+      trainingData,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Error while getting public training data",
+    });
+  }
+};
+
 export const deleteTraining = async (req, res) => {
   try {
-    const {trainingId} = req.params;
-    const deletedExpense = await Training.findByIdAndDelete(trainingId);
+    const { trainingId } = req.params;
+    const userId = req.user?._id; // Authenticated user ID
+    console.log(userId);
+    
+    const isAdmin = req.user?.isAdmin; // Check if the user is an admin
 
-    if (!deletedExpense) {
+    // Find the training by ID
+    const training = await Training.findById(trainingId);
+    console.log(training);
+    
+
+    if (!training) {
       return res.status(404).json({
         success: false,
-        message: "Expense not found",
+        message: "Training not found",
       });
     }
 
-    const userId = req.user?._id;
-    const cacheKey = `training_${userId}`;
+    // Check if the training is public
+    const isPublic = training.isPublic;
+
+    // If the training is public, only admins can delete it
+    if (isPublic && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can delete public training data.",
+      });
+    }
+
+    // If the training is not public, ensure that the user owns the training
+    if (!isPublic && training.userId.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to delete this training.",
+      });
+    }
+
+    // If either condition is met (admin deleting public data or user deleting their own private data), proceed with deletion
+    await Training.findByIdAndDelete(trainingId);
+
+    const cacheKey = `training_${userId}`; // Clear cache for the user's training data
     cache.del(cacheKey);
 
     res.status(200).json({
       success: true,
       message: "Training delete successfully",
-    })
+    });
   } catch (error) {
     console.log(error);
     res.status(500).json({

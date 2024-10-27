@@ -281,7 +281,7 @@ export const logoutController = async (req, res) => {
     // 3. Set cookie options
     const options = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "development" ? true : false,
+      secure: process.env.NODE_ENV === "production" ? true : false,
       sameSite: "None",
     };
 

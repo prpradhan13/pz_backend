@@ -2,7 +2,6 @@ import Todo from "../models/todo.model.js";
 import NodeCache from "node-cache";
 
 const cache = new NodeCache({ stdTTL: 600 });
-const cacheKey = "todoDataCache";
 
 export const createTodo = async (req, res) => {
   try {
@@ -19,9 +18,8 @@ export const createTodo = async (req, res) => {
     });
 
     // Check if cacheKey exists and then delete the cache
-    if (cache && cacheKey) {
-      cache.del(cacheKey);
-    }
+    const cacheKey = `todos_${userId}`;
+    cache.del(cacheKey);
 
     res.status(201).json({
       success: true,
@@ -48,13 +46,14 @@ export const getTodo = async (req, res) => {
       });
     }
 
+    const cacheKey = `todos_${userId}`;
     const cachedData = cache.get(cacheKey);
     if (cachedData) {
-      console.log("Serving Todo from cache");
+      console.log(`Serving todos from cache for user: ${userId}`);
       return res.status(200).json({
         success: true,
         message: "Todos retrieved from cache successfully",
-        todos: cache.get(cacheKey),
+        todos: cachedData,
       });
     }
 
@@ -115,6 +114,8 @@ export const updateTodo = async (req, res) => {
       });
     }
 
+    const userId = req.user?._id;
+    const cacheKey = `todos_${userId}`;
     cache.del(cacheKey);
 
     return res.status(200).json({
@@ -136,8 +137,6 @@ export const updateTodoTask = async (req, res) => {
   try {
     const { todoId } = req.params;
     const { taskId, taskTitle, completed } = req.body;
-
-    console.log("Incoming data:", { todoId, taskId, taskTitle, completed });
 
     // Check if taskId and either taskTitle or completed status are provided
     if (!taskId || (!taskTitle && completed === undefined)) {
@@ -166,6 +165,9 @@ export const updateTodoTask = async (req, res) => {
       });
     }
 
+    
+    const userId = req.user?._id;
+    const cacheKey = `todos_${userId}`;
     cache.del(cacheKey);
 
     return res.status(200).json({
@@ -185,8 +187,10 @@ export const updateTodoTask = async (req, res) => {
 
 export const deleteTodo = async (req, res) => {
   try {
+    const userId = req.user?._id;
     await Todo.findByIdAndDelete(req.params.todoId);
 
+    const cacheKey = `todos_${userId}`;
     cache.del(cacheKey);
 
     res.status(200).json({
@@ -220,6 +224,8 @@ export const deleteTodoTask = async (req, res) => {
       });
     }
 
+    const userId = req.user?._id;
+    const cacheKey = `todos_${userId}`;
     cache.del(cacheKey);
 
     // Check if the tasks array is empty after deletion

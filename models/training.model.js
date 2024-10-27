@@ -36,16 +36,17 @@ const trainingSchema = new mongoose.Schema({
                 required: true,
                 maxlength: 100
             },
-            // repetitions: [
-            //     {type: Number, required: true}
-            // ],
             sets: [{ repetitions: {type: Number, default:0} }],
             restTime: {
                 type: Number,
                 default: 0
             }
         }
-    ]
+    ],
+    isPublic: {
+        type: Boolean,
+        default: false
+    }
 }, {timestamps: true});
 
 export default mongoose.model('Training', trainingSchema);

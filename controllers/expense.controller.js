@@ -1,13 +1,23 @@
 import Expense from "../models/expense.model.js";
-import NodeCache from 'node-cache';
+import NodeCache from "node-cache";
 
 // Initialize the cache with a default TTL of 600 seconds (10 minutes)
 const cache = new NodeCache({ stdTTL: 600 });
-const cacheKey = "expenses";
 
 export const createExpense = async (req, res) => {
   try {
     const expensesData = req.body;
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    // Use user-specific cache key
+    const cacheKey = `expenses_${userId}`;
 
     // 1. Check if data is an array or a single object
     if (!Array.isArray(expensesData)) {
@@ -29,6 +39,9 @@ export const createExpense = async (req, res) => {
         category: category.toLowerCase(),
         date: date ? new Date(date) : new Date(),
       });
+
+      // Clear the cache after creating the expense
+      cache.del(cacheKey);
 
       return res.status(200).json({
         success: true,
@@ -87,9 +100,10 @@ export const userAllExpenses = async (req, res) => {
 
     // 2. Optional query parameters for pagination and sorting
     // const { limit = 10, page = 1, sortBy = "date", order = "desc" } = req.query;
-    const { limit , page , sortBy = "date", order = "desc" } = req.query;
+    const { limit, page, sortBy = "date", order = "desc" } = req.query;
 
     // 4. Check if the data is already in the cache
+    const cacheKey = `expenses_${userId}`;
     const cachedData = cache.get(cacheKey);
     if (cachedData) {
       console.log("Serving from cache");
@@ -184,6 +198,9 @@ export const updateExpense = async (req, res) => {
       });
     }
 
+    // Use user-specific cache key
+    const userId = req.user?._id;
+    const cacheKey = `expenses_${userId}`;
     cache.del(cacheKey);
 
     return res.status(200).json({
@@ -204,6 +221,7 @@ export const updateExpense = async (req, res) => {
 export const deleteExpense = async (req, res) => {
   try {
     const { expenseId } = req.params;
+    const userId = req.user?._id;
 
     const deletedExpense = await Expense.findByIdAndDelete(expenseId);
 
@@ -214,6 +232,7 @@ export const deleteExpense = async (req, res) => {
       });
     }
 
+    const cacheKey = `expenses_${userId}`;
     cache.del(cacheKey);
 
     return res.status(200).json({

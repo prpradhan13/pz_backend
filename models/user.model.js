@@ -37,8 +37,13 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-    isEmailVerified: { type: Boolean, default: false },
-    emailVerificationToken: { type: String },
+    isEmailVerified: { 
+        type: Boolean, 
+        default: false 
+    },
+    emailVerificationToken: { 
+        type: String 
+    },
 }, {timestamps: true});
 
 userSchema.pre("save", async function (next) {

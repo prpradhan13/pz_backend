@@ -3,12 +3,11 @@ import NodeCache from "node-cache";
 
 // Initialize the cache with a default TTL of 600 seconds (10 minutes)
 const cache = new NodeCache({ stdTTL: 600 });
-const cacheKey = "training";
 
 export const createTraining = async (req, res) => {
   try {
-    const { trainingName, category, trainingPlan } = req.body;
-
+    const { trainingName, category, trainingPlan, isPublic } = req.body;
+    const userId = req.user?._id;
     // Validate required fields
     if (
       !trainingName ||
@@ -23,7 +22,7 @@ export const createTraining = async (req, res) => {
     }
 
     // Ensure user is authenticated and has a valid userId
-    if (!req.user || !req.user._id) {
+    if (!req.user || !userId) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized: User not found.",
@@ -32,16 +31,16 @@ export const createTraining = async (req, res) => {
 
     // Create a new Training instance with the data
     const newTraining = await Training.create({
-      userId: req.user?._id,
+      userId,
       trainingName: trainingName.toLowerCase(),
       category: category.toLowerCase(),
       trainingPlan,
+      isPublic
     });
 
     // Check if cacheKey exists and then delete the cache
-    if (cache && cacheKey) {
-      cache.del(cacheKey);
-    }
+    const cacheKey = `training_${userId}`;
+    cache.del(cacheKey);
 
     return res.status(200).json({
       success: true,
@@ -63,12 +62,13 @@ export const getTraining = async (req, res) => {
 
     const { limit, page, sortBy = "date", order = "desc" } = req.query;
 
+    const cacheKey = `training_${userId}`;
     const cachedData = cache.get(cacheKey);
     if (cachedData) {
       console.log("Serving from cache");
       return res.status(200).json({
         success: true,
-        message: "Expenses retrieved from cache successfully",
+        message: "Training retrieved from cache successfully",
         trainingData: cache.get(cacheKey),
       });
     }
@@ -84,7 +84,7 @@ export const getTraining = async (req, res) => {
     if (!training || training.length === 0) {
       return res.status(404).json({
         success: false,
-        message: "No expenses found for this user",
+        message: "No training found for this user",
       });
     }
 
@@ -118,6 +118,8 @@ export const deleteTraining = async (req, res) => {
       });
     }
 
+    const userId = req.user?._id;
+    const cacheKey = `training_${userId}`;
     cache.del(cacheKey);
 
     res.status(200).json({

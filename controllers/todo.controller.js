@@ -202,3 +202,48 @@ export const deleteTodo = async (req, res) => {
     });
   }
 };
+
+export const deleteTodoTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    // Find the todo containing this task and update it by removing the task from the tasks array
+    const updatedTodo = await Todo.findOneAndUpdate(
+      { "tasks._id": taskId }, // Find the todo containing the task by task ID
+      { $pull: { tasks: { _id: taskId } } }, // Remove the task with matching taskId from the tasks array
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedTodo) {
+      return res.status(404).json({
+        success: false,
+        message: "Task not found",
+      });
+    }
+
+    cache.del(cacheKey);
+
+    // Check if the tasks array is empty after deletion
+    if (updatedTodo.tasks.length === 0) {
+      await Todo.findByIdAndDelete(updatedTodo._id);
+
+      return res.status(200).json({
+        success: true,
+        message: "Todo deleted because it has no tasks left",
+      });
+    }
+
+    cache.del(cacheKey);
+
+    res.status(200).json({
+      success: true,
+      message: "Task deleted successfully",
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Error while deleting todo",
+      error: error.message,
+    });
+  }
+};

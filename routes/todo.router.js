@@ -3,6 +3,7 @@ import { verifyJWT } from "../middlewares/user.middleware.js";
 import {
   createTodo,
   deleteTodo,
+  deleteTodoTask,
   getTodo,
   updateTodo,
   updateTodoTask,
@@ -17,5 +18,7 @@ router
   .put(verifyJWT, updateTodo)
   .patch(verifyJWT, updateTodoTask)
   .delete(verifyJWT, deleteTodo);
+
+router.route("/task/:taskId").delete(verifyJWT, deleteTodoTask);
 
 export default router;

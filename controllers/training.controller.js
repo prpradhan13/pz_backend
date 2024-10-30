@@ -111,6 +111,58 @@ export const getTraining = async (req, res) => {
   }
 };
 
+export const updatePublicField = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { trainingId } = req.params;
+    const { isPublic } = req.body;
+
+    const isAdmin = req.user?.isAdmin;
+    if (!isAdmin) {
+      return res.status(404).json({
+        success: false,
+        message: "Only admins can update public training data."
+      });
+    }
+
+    if (isPublic === undefined || isPublic === null) {
+      return res.status(400).json({
+        success: false,
+        message: "All field is required to update",
+      });
+    }
+
+    const updatePublic = await Training.findByIdAndUpdate(
+      trainingId,
+      {isPublic},
+      {new: true}
+    )
+
+    if (!updatePublic) {
+      return res.status(404).json({
+        success: false,
+        message: "Training not found",
+      });
+    }
+
+    const cacheKey = `training_${userId}`;
+    cache.del(cacheKey);
+
+    return res.status(200).json({
+      success: true,
+      message: "Todo updated successfully",
+      todoData: updatePublic,
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Error while updating training"
+    });
+  }
+};
+
 export const allPublicTrainingData = async (req, res) => {
   try {
     const {
@@ -156,10 +208,10 @@ export const allPublicTrainingData = async (req, res) => {
 export const deleteTraining = async (req, res) => {
   try {
     const { trainingId } = req.params;
-    const userId = req.user?._id; // Authenticated user ID
+    const userId = req.user?._id;
     console.log(userId);
     
-    const isAdmin = req.user?.isAdmin; // Check if the user is an admin
+    const isAdmin = req.user?.isAdmin;
 
     // Find the training by ID
     const training = await Training.findById(trainingId);
